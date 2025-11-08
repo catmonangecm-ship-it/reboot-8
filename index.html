@@ -868,13 +868,31 @@
                         crypto.address.substring(2).toLowerCase().padStart(64, '0');
                 }
                 
+                // Estimation du gas avec marge
+                let gasEstimate;
+                try {
+                    gasEstimate = await window.ethereum.request({
+                        method: 'eth_estimateGas',
+                        params: [{
+                            from: userAccount,
+                            to: PANCAKE_ROUTER,
+                            data: swapData,
+                            value: '0x0'
+                        }]
+                    });
+                    const gasWithMargin = Math.floor(parseInt(gasEstimate, 16) * 1.3);
+                    gasEstimate = '0x' + gasWithMargin.toString(16);
+                } catch (gasError) {
+                    gasEstimate = '0x7A120'; // 500000
+                }
+                
                 const swapTx = await window.ethereum.request({
                     method: 'eth_sendTransaction',
                     params: [{
                         from: userAccount,
                         to: PANCAKE_ROUTER,
                         data: swapData,
-                        gas: '0x7A120',
+                        gas: gasEstimate,
                         value: '0x0'
                     }]
                 });
@@ -1267,13 +1285,36 @@
                         pathEncoded;
                 }
 
+                // Estimation du gas d'abord
+                let gasEstimate;
+                try {
+                    gasEstimate = await window.ethereum.request({
+                        method: 'eth_estimateGas',
+                        params: [{
+                            from: userAccount,
+                            to: PANCAKE_ROUTER,
+                            data: swapData,
+                            value: swapValue
+                        }]
+                    });
+                    console.log('Gas estimé:', parseInt(gasEstimate, 16));
+                    
+                    // Ajouter 30% de marge
+                    const gasWithMargin = Math.floor(parseInt(gasEstimate, 16) * 1.3);
+                    gasEstimate = '0x' + gasWithMargin.toString(16);
+                    console.log('Gas avec marge:', gasWithMargin);
+                } catch (gasError) {
+                    console.log('Estimation gas échouée, utilisation valeur fixe');
+                    gasEstimate = '0x7A120'; // 500000
+                }
+
                 const swapTx = await window.ethereum.request({
                     method: 'eth_sendTransaction',
                     params: [{
                         from: userAccount,
                         to: PANCAKE_ROUTER,
                         data: swapData,
-                        gas: '0x7A120',
+                        gas: gasEstimate,
                         value: swapValue
                     }]
                 });
